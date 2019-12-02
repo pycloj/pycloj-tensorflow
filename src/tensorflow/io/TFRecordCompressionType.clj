@@ -1,0 +1,17 @@
+(ns tensorflow.io.TFRecordCompressionType
+  "The type of compression for the record."
+  (:require [libpython-clj.python
+             :refer [import-module
+                     get-item
+                     get-attr
+                     python-type
+                     call-attr
+                     call-attr-kw]:as py]))
+
+(py/initialize!)
+(defonce io (import-module "tensorflow.io"))
+
+(defn TFRecordCompressionType 
+  "The type of compression for the record."
+  [  ]
+  (py/call-attr io "TFRecordCompressionType"  ))

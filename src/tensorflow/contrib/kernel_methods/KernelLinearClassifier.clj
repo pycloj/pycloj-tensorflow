@@ -1,0 +1,453 @@
+(ns tensorflow.contrib.kernel-methods.KernelLinearClassifier
+  "Linear classifier using kernel methods as feature preprocessing.
+
+  It trains a linear model after possibly mapping initial input features into
+  a mapped space using explicit kernel mappings. Due to the kernel mappings,
+  training a linear classifier in the mapped (output) space can detect
+  non-linearities in the input space.
+
+  The user can provide a list of kernel mappers to be applied to all or a subset
+  of existing feature_columns. This way, the user can effectively provide 2
+  types of feature columns:
+
+  * those passed as elements of feature_columns in the classifier's constructor
+  * those appearing as a key of the kernel_mappers dict.
+
+  If a column appears in feature_columns only, no mapping is applied to it. If
+  it appears as a key in kernel_mappers, the corresponding kernel mappers are
+  applied to it. Note that it is possible that a column appears in both places.
+  Currently kernel_mappers are supported for _RealValuedColumns only.
+
+  Example usage:
+  ```
+  real_column_a = real_valued_column(name='real_column_a',...)
+  sparse_column_b = sparse_column_with_hash_bucket(...)
+  kernel_mappers = {real_column_a : [RandomFourierFeatureMapper(...)]}
+  optimizer = ...
+
+  # real_column_a is used as a feature in both its initial and its transformed
+  # (mapped) form. sparse_column_b is not affected by kernel mappers.
+  kernel_classifier = KernelLinearClassifier(
+      feature_columns=[real_column_a, sparse_column_b],
+      model_dir=...,
+      optimizer=optimizer,
+      kernel_mappers=kernel_mappers)
+
+  # real_column_a is used as a feature in its transformed (mapped) form only.
+  # sparse_column_b is not affected by kernel mappers.
+  kernel_classifier = KernelLinearClassifier(
+      feature_columns=[sparse_column_b],
+      model_dir=...,
+      optimizer=optimizer,
+      kernel_mappers=kernel_mappers)
+
+  # Input builders
+  def train_input_fn: # returns x, y
+    ...
+  def eval_input_fn: # returns x, y
+    ...
+
+  kernel_classifier.fit(input_fn=train_input_fn)
+  kernel_classifier.evaluate(input_fn=eval_input_fn)
+  kernel_classifier.predict(...)
+  ```
+
+  Input of `fit` and `evaluate` should have following features, otherwise there
+  will be a `KeyError`:
+
+  * if `weight_column_name` is not `None`, a feature with
+    `key=weight_column_name` whose value is a `Tensor`.
+  * for each `column` in `feature_columns`:
+    - if `column` is a `SparseColumn`, a feature with `key=column.name`
+      whose `value` is a `SparseTensor`.
+    - if `column` is a `WeightedSparseColumn`, two features: the first with
+      `key` the id column name, the second with `key` the weight column name.
+      Both features' `value` must be a `SparseTensor`.
+    - if `column` is a `RealValuedColumn`, a feature with `key=column.name`
+      whose `value` is a `Tensor`.
+  "
+  (:require [libpython-clj.python
+             :refer [import-module
+                     get-item
+                     get-attr
+                     python-type
+                     call-attr
+                     call-attr-kw]:as py]))
+
+(py/initialize!)
+(defonce kernel-methods (import-module "tensorflow.contrib.kernel_methods"))
+
+(defn KernelLinearClassifier 
+  "Linear classifier using kernel methods as feature preprocessing.
+
+  It trains a linear model after possibly mapping initial input features into
+  a mapped space using explicit kernel mappings. Due to the kernel mappings,
+  training a linear classifier in the mapped (output) space can detect
+  non-linearities in the input space.
+
+  The user can provide a list of kernel mappers to be applied to all or a subset
+  of existing feature_columns. This way, the user can effectively provide 2
+  types of feature columns:
+
+  * those passed as elements of feature_columns in the classifier's constructor
+  * those appearing as a key of the kernel_mappers dict.
+
+  If a column appears in feature_columns only, no mapping is applied to it. If
+  it appears as a key in kernel_mappers, the corresponding kernel mappers are
+  applied to it. Note that it is possible that a column appears in both places.
+  Currently kernel_mappers are supported for _RealValuedColumns only.
+
+  Example usage:
+  ```
+  real_column_a = real_valued_column(name='real_column_a',...)
+  sparse_column_b = sparse_column_with_hash_bucket(...)
+  kernel_mappers = {real_column_a : [RandomFourierFeatureMapper(...)]}
+  optimizer = ...
+
+  # real_column_a is used as a feature in both its initial and its transformed
+  # (mapped) form. sparse_column_b is not affected by kernel mappers.
+  kernel_classifier = KernelLinearClassifier(
+      feature_columns=[real_column_a, sparse_column_b],
+      model_dir=...,
+      optimizer=optimizer,
+      kernel_mappers=kernel_mappers)
+
+  # real_column_a is used as a feature in its transformed (mapped) form only.
+  # sparse_column_b is not affected by kernel mappers.
+  kernel_classifier = KernelLinearClassifier(
+      feature_columns=[sparse_column_b],
+      model_dir=...,
+      optimizer=optimizer,
+      kernel_mappers=kernel_mappers)
+
+  # Input builders
+  def train_input_fn: # returns x, y
+    ...
+  def eval_input_fn: # returns x, y
+    ...
+
+  kernel_classifier.fit(input_fn=train_input_fn)
+  kernel_classifier.evaluate(input_fn=eval_input_fn)
+  kernel_classifier.predict(...)
+  ```
+
+  Input of `fit` and `evaluate` should have following features, otherwise there
+  will be a `KeyError`:
+
+  * if `weight_column_name` is not `None`, a feature with
+    `key=weight_column_name` whose value is a `Tensor`.
+  * for each `column` in `feature_columns`:
+    - if `column` is a `SparseColumn`, a feature with `key=column.name`
+      whose `value` is a `SparseTensor`.
+    - if `column` is a `WeightedSparseColumn`, two features: the first with
+      `key` the id column name, the second with `key` the weight column name.
+      Both features' `value` must be a `SparseTensor`.
+    - if `column` is a `RealValuedColumn`, a feature with `key=column.name`
+      whose `value` is a `Tensor`.
+  "
+  [feature_columns model_dir & {:keys [n_classes weight_column_name optimizer kernel_mappers config]
+                       :or {weight_column_name None optimizer None kernel_mappers None config None}} ]
+    (py/call-attr-kw kernel-methods "KernelLinearClassifier" [feature_columns model_dir] {:n_classes n_classes :weight_column_name weight_column_name :optimizer optimizer :kernel_mappers kernel_mappers :config config }))
+
+(defn config 
+  ""
+  [ self ]
+    (py/call-attr self "config"))
+(defn evaluate 
+  "See `Evaluable`. (deprecated arguments)
+
+Warning: SOME ARGUMENTS ARE DEPRECATED: `(batch_size, x, y)`. They will be removed after 2016-12-01.
+Instructions for updating:
+Estimator is decoupled from Scikit Learn interface by moving into
+separate class SKCompat. Arguments x, y and batch_size are only
+available in the SKCompat class, Estimator will only accept input_fn.
+Example conversion:
+  est = Estimator(...) -> est = SKCompat(Estimator(...))
+
+Raises:
+  ValueError: If at least one of `x` or `y` is provided, and at least one of
+      `input_fn` or `feed_fn` is provided.
+      Or if `metrics` is not `None` or `dict`."
+  [self x y input_fn feed_fn batch_size steps metrics name checkpoint_path hooks  & {:keys [log_progress]} ]
+    (py/call-attr-kw self "evaluate" [x y input_fn feed_fn batch_size steps metrics name checkpoint_path hooks] {:log_progress log_progress }))
+
+(defn export 
+  "Exports inference graph into given dir. (deprecated)
+
+Warning: THIS FUNCTION IS DEPRECATED. It will be removed after 2017-03-25.
+Instructions for updating:
+Please use Estimator.export_savedmodel() instead.
+
+Args:
+  export_dir: A string containing a directory to write the exported graph
+    and checkpoints.
+  input_fn: If `use_deprecated_input_fn` is true, then a function that given
+    `Tensor` of `Example` strings, parses it into features that are then
+    passed to the model. Otherwise, a function that takes no argument and
+    returns a tuple of (features, labels), where features is a dict of
+    string key to `Tensor` and labels is a `Tensor` that's currently not
+    used (and so can be `None`).
+  input_feature_key: Only used if `use_deprecated_input_fn` is false. String
+    key into the features dict returned by `input_fn` that corresponds to a
+    the raw `Example` strings `Tensor` that the exported model will take as
+    input. Can only be `None` if you're using a custom `signature_fn` that
+    does not use the first arg (examples).
+  use_deprecated_input_fn: Determines the signature format of `input_fn`.
+  signature_fn: Function that returns a default signature and a named
+    signature map, given `Tensor` of `Example` strings, `dict` of `Tensor`s
+    for features and `Tensor` or `dict` of `Tensor`s for predictions.
+  prediction_key: The key for a tensor in the `predictions` dict (output
+    from the `model_fn`) to use as the `predictions` input to the
+    `signature_fn`. Optional. If `None`, predictions will pass to
+    `signature_fn` without filtering.
+  default_batch_size: Default batch size of the `Example` placeholder.
+  exports_to_keep: Number of exports to keep.
+  checkpoint_path: the checkpoint path of the model to be exported. If it is
+      `None` (which is default), will use the latest checkpoint in
+      export_dir.
+
+Returns:
+  The string path to the exported directory. NB: this functionality was
+  added ca. 2016/09/25; clients that depend on the return value may need
+  to handle the case where this function returns None because subclasses
+  are not returning a value."
+  [self export_dir & {:keys [input_fn input_feature_key use_deprecated_input_fn signature_fn prediction_key default_batch_size exports_to_keep checkpoint_path]
+                       :or {input_feature_key None signature_fn None prediction_key None exports_to_keep None checkpoint_path None}} ]
+    (py/call-attr-kw self "export" [export_dir] {:input_fn input_fn :input_feature_key input_feature_key :use_deprecated_input_fn use_deprecated_input_fn :signature_fn signature_fn :prediction_key prediction_key :default_batch_size default_batch_size :exports_to_keep exports_to_keep :checkpoint_path checkpoint_path }))
+
+(defn export-savedmodel 
+  "Exports inference graph as a SavedModel into given dir.
+
+    Args:
+      export_dir_base: A string containing a directory to write the exported
+        graph and checkpoints.
+      serving_input_fn: A function that takes no argument and
+        returns an `InputFnOps`.
+      default_output_alternative_key: the name of the head to serve when none is
+        specified.  Not needed for single-headed models.
+      assets_extra: A dict specifying how to populate the assets.extra directory
+        within the exported SavedModel.  Each key should give the destination
+        path (including the filename) relative to the assets.extra directory.
+        The corresponding value gives the full path of the source file to be
+        copied.  For example, the simple case of copying a single file without
+        renaming it is specified as
+        `{'my_asset_file.txt': '/path/to/my_asset_file.txt'}`.
+      as_text: whether to write the SavedModel proto in text format.
+      checkpoint_path: The checkpoint path to export.  If None (the default),
+        the most recent checkpoint found within the model directory is chosen.
+      graph_rewrite_specs: an iterable of `GraphRewriteSpec`.  Each element will
+        produce a separate MetaGraphDef within the exported SavedModel, tagged
+        and rewritten as specified.  Defaults to a single entry using the
+        default serving tag (\"serve\") and no rewriting.
+      strip_default_attrs: Boolean. If `True`, default-valued attributes will be
+        removed from the NodeDefs. For a detailed guide, see
+        [Stripping Default-Valued
+          Attributes](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_model/README.md#stripping-default-valued-attributes).
+
+    Returns:
+      The string path to the exported directory.
+
+    Raises:
+      ValueError: if an unrecognized export_type is requested.
+    "
+  [self export_dir_base serving_input_fn default_output_alternative_key assets_extra & {:keys [as_text checkpoint_path graph_rewrite_specs strip_default_attrs]
+                       :or {checkpoint_path None}} ]
+    (py/call-attr-kw self "export_savedmodel" [export_dir_base serving_input_fn default_output_alternative_key assets_extra] {:as_text as_text :checkpoint_path checkpoint_path :graph_rewrite_specs graph_rewrite_specs :strip_default_attrs strip_default_attrs }))
+
+(defn fit 
+  "See `Trainable`. (deprecated arguments)
+
+Warning: SOME ARGUMENTS ARE DEPRECATED: `(batch_size, x, y)`. They will be removed after 2016-12-01.
+Instructions for updating:
+Estimator is decoupled from Scikit Learn interface by moving into
+separate class SKCompat. Arguments x, y and batch_size are only
+available in the SKCompat class, Estimator will only accept input_fn.
+Example conversion:
+  est = Estimator(...) -> est = SKCompat(Estimator(...))
+
+Raises:
+  ValueError: If `x` or `y` are not `None` while `input_fn` is not `None`.
+  ValueError: If both `steps` and `max_steps` are not `None`."
+  [ self x y input_fn steps batch_size monitors max_steps ]
+  (py/call-attr self "fit"  self x y input_fn steps batch_size monitors max_steps ))
+(defn get-params 
+  "Get parameters for this estimator.
+
+    Args:
+      deep: boolean, optional
+
+        If `True`, will return the parameters for this estimator and
+        contained subobjects that are estimators.
+
+    Returns:
+      params : mapping of string to any
+      Parameter names mapped to their values.
+    "
+  [self   & {:keys [deep]} ]
+    (py/call-attr-kw self "get_params" [] {:deep deep }))
+
+(defn get-variable-names 
+  "Returns list of all variable names in this model.
+
+    Returns:
+      List of names.
+    "
+  [ self  ]
+  (py/call-attr self "get_variable_names"  self  ))
+
+(defn get-variable-value 
+  "Returns value of the variable given by name.
+
+    Args:
+      name: string, name of the tensor.
+
+    Returns:
+      Numpy array - value of the tensor.
+    "
+  [ self name ]
+  (py/call-attr self "get_variable_value"  self name ))
+
+(defn model-dir 
+  ""
+  [ self ]
+    (py/call-attr self "model_dir"))
+
+(defn model-fn 
+  "Returns the model_fn which is bound to self.params.
+
+    Returns:
+      The model_fn with the following signature:
+        `def model_fn(features, labels, mode, metrics)`
+    "
+  [ self ]
+    (py/call-attr self "model_fn"))
+
+(defn partial-fit 
+  "Incremental fit on a batch of samples. (deprecated arguments)
+
+Warning: SOME ARGUMENTS ARE DEPRECATED: `(batch_size, x, y)`. They will be removed after 2016-12-01.
+Instructions for updating:
+Estimator is decoupled from Scikit Learn interface by moving into
+separate class SKCompat. Arguments x, y and batch_size are only
+available in the SKCompat class, Estimator will only accept input_fn.
+Example conversion:
+  est = Estimator(...) -> est = SKCompat(Estimator(...))
+
+This method is expected to be called several times consecutively
+on different or the same chunks of the dataset. This either can
+implement iterative training or out-of-core/online training.
+
+This is especially useful when the whole dataset is too big to
+fit in memory at the same time. Or when model is taking long time
+to converge, and you want to split up training into subparts.
+
+Args:
+  x: Matrix of shape [n_samples, n_features...]. Can be iterator that
+     returns arrays of features. The training input samples for fitting the
+     model. If set, `input_fn` must be `None`.
+  y: Vector or matrix [n_samples] or [n_samples, n_outputs]. Can be
+     iterator that returns array of labels. The training label values
+     (class labels in classification, real numbers in regression). If set,
+     `input_fn` must be `None`.
+  input_fn: Input function. If set, `x`, `y`, and `batch_size` must be
+    `None`.
+  steps: Number of steps for which to train model. If `None`, train forever.
+  batch_size: minibatch size to use on the input, defaults to first
+    dimension of `x`. Must be `None` if `input_fn` is provided.
+  monitors: List of `BaseMonitor` subclass instances. Used for callbacks
+    inside the training loop.
+
+Returns:
+  `self`, for chaining.
+
+Raises:
+  ValueError: If at least one of `x` and `y` is provided, and `input_fn` is
+      provided."
+  [self x y input_fn & {:keys [steps batch_size monitors]
+                       :or {batch_size None monitors None}} ]
+    (py/call-attr-kw self "partial_fit" [x y input_fn] {:steps steps :batch_size batch_size :monitors monitors }))
+(defn predict 
+  "Returns predictions for given features. (deprecated arguments)
+
+Warning: SOME ARGUMENTS ARE DEPRECATED: `(as_iterable, batch_size, x)`. They will be removed after 2016-12-01.
+Instructions for updating:
+Estimator is decoupled from Scikit Learn interface by moving into
+separate class SKCompat. Arguments x, y and batch_size are only
+available in the SKCompat class, Estimator will only accept input_fn.
+Example conversion:
+  est = Estimator(...) -> est = SKCompat(Estimator(...))
+
+Args:
+  x: Matrix of shape [n_samples, n_features...]. Can be iterator that
+     returns arrays of features. The training input samples for fitting the
+     model. If set, `input_fn` must be `None`.
+  input_fn: Input function. If set, `x` and 'batch_size' must be `None`.
+  batch_size: Override default batch size. If set, 'input_fn' must be
+    'None'.
+  outputs: list of `str`, name of the output to predict.
+    If `None`, returns all.
+  as_iterable: If True, return an iterable which keeps yielding predictions
+    for each example until inputs are exhausted. Note: The inputs must
+    terminate if you want the iterable to terminate (e.g. be sure to pass
+    num_epochs=1 if you are using something like read_batch_features).
+  iterate_batches: If True, yield the whole batch at once instead of
+    decomposing the batch into individual samples. Only relevant when
+    as_iterable is True.
+
+Returns:
+  A numpy array of predicted classes or regression values if the
+  constructor's `model_fn` returns a `Tensor` for `predictions` or a `dict`
+  of numpy arrays if `model_fn` returns a `dict`. Returns an iterable of
+  predictions if as_iterable is True.
+
+Raises:
+  ValueError: If x and input_fn are both provided or both `None`."
+  [self x input_fn batch_size outputs  & {:keys [as_iterable iterate_batches]} ]
+    (py/call-attr-kw self "predict" [x input_fn batch_size outputs] {:as_iterable as_iterable :iterate_batches iterate_batches }))
+
+(defn predict-classes 
+  "Runs inference to determine the predicted class per instance.
+
+    Args:
+      input_fn: The input function providing features.
+
+    Returns:
+      A generator of predicted classes for the features provided by input_fn.
+      Each predicted class is represented by its class index (i.e. integer from
+      0 to n_classes-1)
+    "
+  [ self input_fn ]
+  (py/call-attr self "predict_classes"  self input_fn ))
+
+(defn predict-proba 
+  "Runs inference to determine the class probability predictions.
+
+    Args:
+      input_fn: The input function providing features.
+
+    Returns:
+      A generator of predicted class probabilities for the features provided by
+        input_fn.
+    "
+  [ self input_fn ]
+  (py/call-attr self "predict_proba"  self input_fn ))
+
+(defn set-params 
+  "Set the parameters of this estimator.
+
+    The method works on simple estimators as well as on nested objects
+    (such as pipelines). The former have parameters of the form
+    ``<component>__<parameter>`` so that it's possible to update each
+    component of a nested object.
+
+    Args:
+      **params: Parameters.
+
+    Returns:
+      self
+
+    Raises:
+      ValueError: If params contain invalid names.
+    "
+  [ self  ]
+  (py/call-attr self "set_params"  self  ))
